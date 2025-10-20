@@ -1,11 +1,13 @@
+import { Link } from "react-router-dom";
+
 function BlogCard(props) {
-    const { image, category, title, description, author, date } = props
+    const { image, category, title, description, author, date, id } = props
 
     return (
       <div className="flex flex-col gap-4 mt-5 lg:mt-15 w-full box-border">
-        <a href="#" className="relative h-[212px] sm:h-[360px]">
+        <Link to={`/posts/${id}`} className="relative h-[212px] sm:h-[360px]">
           <img className="w-full h-full object-cover rounded-2xl" src={image} alt={title}/>
-        </a>
+        </Link>
         <div className="flex flex-col">
           <div className="flex">
             <span className="bg-green-200 rounded-full px-3 py-1 text-sm font-semibold text-green-600 mb-2">{category}
