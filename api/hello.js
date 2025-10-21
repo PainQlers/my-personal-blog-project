@@ -11,13 +11,9 @@ module.exports = async function handler(req, res) {
 
     try {
         res.status(200).json({
-            message: "Server is working",
-            env: {
-                hasConnectionString: !!process.env.CONNECTION_STRING,
-                hasPort: !!process.env.PORT,
-                hasSupabaseKey: !!process.env.SUPABASE_ANON_KEY,
-                nodeEnv: process.env.NODE_ENV
-            }
+            message: "Hello from Vercel API!",
+            method: req.method,
+            timestamp: new Date().toISOString()
         });
     } catch (error) {
         console.error('API Error:', error);
