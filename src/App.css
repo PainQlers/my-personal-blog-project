@@ -1,44 +1,162 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
-}
+@custom-variant dark (&:is(.dark *));
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
+  background-color: #F9F8F6;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+/* ป้องกันการขยับของ content เมื่อ modal เปิด */
+body[data-scroll-locked] {
+  overflow: hidden;
+  padding-right: 0 !important;
+}
+
+body.modal-open {
+  overflow: hidden;
+  padding-right: 17px; /* ปรับให้เท่ากับความกว้างของ scrollbar */
+}
+
+/* จัดการ scrollbar ให้ไม่ทำให้ content ขยับ */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* ป้องกันการขยับเมื่อ AlertDialog เปิด */
+[data-radix-scroll-area-viewport] {
+  scrollbar-gutter: stable;
+}
+
+/* จัดการ overflow ของ modal */
+[data-radix-dialog-content] {
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.markdown {
+  font-size: 16px;
+  font-weight: 400;
+}
+
+.markdown :is(h2) {
+  margin-top: 32px;
+  margin-bottom: 12px;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.markdown :is(h3, h4, h5, h6) {
+  margin-top: 32px;
+  margin-bottom: 12px;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.markdown p:not(:is(h2, h3, h4, h5, h6) + p) {
+  margin-top: 22px;
+}
+
+.markdown :is(ul, ol) {
+  list-style-position: outside;
+}
+
+.markdown :is(ul) {
+  list-style-type: "•";
+}
+
+.markdown :is(ol) {
+  list-style-type: decimal;
+  padding-left: 20px;
+}
+
+.markdown :is(a) {
+  text-decoration: underline;
+}
+
+.markdown :is(a):hover {
+  text-decoration: underline;
+  color: #726d67;
+  cursor: pointer;
+}
+
+.markdown :is(ul) li {
+  margin-block: 8px;
+  padding-inline-start: 8px;
+  padding-left: 5px;
+  margin-left: 10px;
+}
+
+.markdown :is(ol) li {
+  margin-block: 8px;
+  padding-inline-start: 8px;
+  padding-left: 3px;
+  margin-left: 10px;
+}
+
+.markdown :is(blockquote) {
+  border-left: 3px solid #26231e;
+  margin: 1.5em 10px;
+  padding-left: 10px;
+  font-style: italic;
+}
+
+.markdown :is(hr) {
+  border: none;
+  border-top: 2.5px solid #d1d5db;
+  margin: 1.5em 0;
+  width: 30%;
+}
+
+.markdown img {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 2em 0;
+  border-radius: 12px;
+}
+
+:root {
+  --sidebar: hsl(0 0% 98%);
+  --sidebar-foreground: hsl(240 5.3% 26.1%);
+  --sidebar-primary: hsl(240 5.9% 10%);
+  --sidebar-primary-foreground: hsl(0 0% 98%);
+  --sidebar-accent: hsl(240 4.8% 95.9%);
+  --sidebar-accent-foreground: hsl(240 5.9% 10%);
+  --sidebar-border: hsl(220 13% 91%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+.dark {
+  --sidebar: hsl(240 5.9% 10%);
+  --sidebar-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-primary: hsl(224.3 76.3% 48%);
+  --sidebar-primary-foreground: hsl(0 0% 100%);
+  --sidebar-accent: hsl(240 3.7% 15.9%);
+  --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
+  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-ring: hsl(217.2 91.2% 59.8%);
+}
+
+@theme inline {
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  body {
+    @apply bg-white text-black;
   }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }
