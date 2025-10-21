@@ -7,7 +7,7 @@ import Footer from "./Footer"
 function Home() {
     return(
         <>
-            <NavbarUser />
+            <Navbar />
             <HeroSelection />
             <ArticleSection />
             <Footer /> 
