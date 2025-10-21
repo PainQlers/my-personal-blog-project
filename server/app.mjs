@@ -13,14 +13,14 @@ const router = express.Router();
 app.use(express.json());
 app.use(cors());
 
-app.use('/register', registerRouter)
-app.use('/posts', postsRouter)
+app.use('/api/register', registerRouter)
+app.use('/api/posts', postsRouter)
 
-app.get("/test" , (req, res) => {
+app.get("/api/test" , (req, res) => {
     return res.json({message : `Server is working`});
 })
 
-app.get("/test1" , async (req, res) => {
+app.get("/api/test1" , async (req, res) => {
     const { data, error } = await pool.query('SELECT * FROM users');
   if (error) return res.status(500).json({ error: error.message });
   return res.json(data);
