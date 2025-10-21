@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from "express";
 import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
