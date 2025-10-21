@@ -17,7 +17,14 @@ app.use('/api/posts', postsRouter)
 
 // Test routes
 app.get("/api/test" , (req, res) => {
-    return res.json({message : `Server is working`});
+    return res.json({
+        message: `Server is working`,
+        env: {
+            hasConnectionString: !!process.env.CONNECTION_STRING,
+            hasPort: !!process.env.PORT,
+            nodeEnv: process.env.NODE_ENV
+        }
+    });
 })
 
 app.get("/api/test1" , async (req, res) => {
