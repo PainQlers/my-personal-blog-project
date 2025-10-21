@@ -156,9 +156,6 @@ html {
 }
 
 @layer base {
-  * {
-    @apply border border-gray-200;
-  }
   body {
     @apply bg-white text-black;
   }
