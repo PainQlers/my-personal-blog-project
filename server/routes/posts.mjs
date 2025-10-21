@@ -1,14 +1,15 @@
 import { Router } from "express";
 import pool from "../utils/db.mjs";
+import { validateCreatePost, validateUpdatePost } from "../validation/postsValidation.mjs";
 
 const postsRouter = Router();
 
 postsRouter.post('/', async (req, res) => {
     try {
+        const { valid, errors } = validateCreatePost(req.body);
+        if (!valid) return res.status(400).json({ error: errors });
+
         const { title, image, category_id, description, content, status_id } = req.body;
-  
-      if (!title || !image || !category_id || !description || !content || !status_id) 
-        return res.status(400).json({ error: 'All fields are required' });
   
       const query = `
         INSERT INTO posts (title, image, category_id, description, content, status_id)
@@ -70,12 +71,12 @@ postsRouter.get('/', async (req, res) => {
 
 postsRouter.put('/:postId', async (req, res) => {
     try {
+        const { valid, errors } = validateUpdatePost(req.body);
+        if (!valid) return res.status(400).json({ error: errors });
+
         const postIdFromClient = req.params.postId;
 
         const { title, image, category_id, description, content, status_id } = req.body;
-  
-      if (!title || !image || !category_id || !description || !content || !status_id) 
-        return res.status(400).json({ error: 'All fields are required' });
   
       const query = `
         UPDATE posts
