@@ -4,30 +4,42 @@ import pool from './utils/db.mjs';
 import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
 import cors from "cors";
-import { createServer } from "@vercel/node";
 
 const app = express();
 const port = process.env.PORT || 4000;
-const router = express.Router();
     
 app.use(express.json());
 app.use(cors());
 
+// API routes
 app.use('/api/register', registerRouter)
 app.use('/api/posts', postsRouter)
 
+// Test routes
 app.get("/api/test" , (req, res) => {
     return res.json({message : `Server is working`});
 })
 
 app.get("/api/test1" , async (req, res) => {
-    const { data, error } = await pool.query('SELECT * FROM users');
-  if (error) return res.status(500).json({ error: error.message });
-  return res.json(data);
+    try {
+        const { data, error } = await pool.query('SELECT * FROM users');
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
 })
 
-app.listen(port, () => {
-    console.log(`Server is running at ${port}`);
+// Health check
+app.get("/", (req, res) => {
+    res.json({ message: "API is running" });
 });
 
-export default createServer(app);
+// Only start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running at ${port}`);
+    });
+}
+
+export default app;
