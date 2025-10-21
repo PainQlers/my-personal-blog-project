@@ -29,7 +29,7 @@ app.get("/api/test1" , async (req, res) => {
     try {
         const { createClient } = await import('@supabase/supabase-js');
         const supabaseUrl = 'https://dngbgajbvfpzvskalouc.supabase.co';
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRuZ2JnYWpidmZwenZza2Fsb3VjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA5MTM1ODAsImV4cCI6MjA3NjQ4OTU4MH0.uR2QWo4mHjzWmJXNz0wo2CE-YQqHwI6Ug5ymwvfiBys';
         const supabase = createClient(supabaseUrl, supabaseKey);
         
         const { data, error } = await supabase.from('users').select('*');
