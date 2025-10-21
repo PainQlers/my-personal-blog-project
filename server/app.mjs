@@ -4,6 +4,7 @@ import pool from './utils/db.mjs';
 import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
 import cors from "cors";
+import { createServer } from "@vercel/node";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -25,8 +26,8 @@ app.get("/test1" , async (req, res) => {
   return res.json(data);
 })
 
-
-
 app.listen(port, () => {
     console.log(`Server is running at ${port}`);
 });
+
+export default createServer(app);
