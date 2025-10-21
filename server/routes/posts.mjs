@@ -1,6 +1,10 @@
 import { Router } from "express";
-import pool from "../utils/db.mjs";
+import { createClient } from '@supabase/supabase-js';
 import { validateCreatePost, validateUpdatePost } from "../validation/postsValidation.mjs";
+
+const supabaseUrl = 'https://dngbgajbvfpzvskalouc.supabase.co';
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const postsRouter = Router();
 
@@ -11,20 +15,24 @@ postsRouter.post('/', async (req, res) => {
 
         const { title, image, category_id, description, content, status_id } = req.body;
   
-      const query = `
-        INSERT INTO posts (title, image, category_id, description, content, status_id)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-        `;
-
-        const values = [title, image, category_id, description, content, status_id];
-
-        const result = await pool.query(query, values)
+        const { data, error } = await supabase
+            .from('posts')
+            .insert([{
+                title,
+                image,
+                category_id,
+                description,
+                content,
+                status_id
+            }])
+            .select()
+            .single();
   
+        if (error) throw error;
   
         res.status(201).json({
-            message: "Created post sucessfully",
-            data : result.rows[0]
+            message: "Created post successfully",
+            data: data
         });
     } catch (error) {
         console.error("POST / error:", error);
@@ -36,32 +44,35 @@ postsRouter.get('/:postId', async (req, res) => {
     try {
       const postIdFromClient = req.params.postId;
 
-      const results = await pool.query(`
-        SELECT * FROM posts
-        WHERE id=$1
-        `,[postIdFromClient])
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*')
+        .eq('id', postIdFromClient)
+        .single();
   
+      if (error) throw error;
   
-        return res.status(200).json({
-            data : results.rows[0]
-        });
+      return res.status(200).json({
+          data: data
+      });
   
     } catch (err) {
-      console.error("POST / error:", err);
+      console.error("GET /:postId error:", err);
       res.status(500).json({ error: err.message });
     }
   });
 
 postsRouter.get('/', async (req, res) => {
     try {
-
-      const results = await pool.query(`
-        SELECT * FROM posts
-        `)
+      const { data, error } = await supabase
+        .from('posts')
+        .select('*');
   
-        return res.status(200).json({
-            data : results.rows
-        });
+      if (error) throw error;
+  
+      return res.status(200).json({
+          data: data
+      });
   
     } catch (err) {
       console.error("GET / error:", err);
@@ -75,24 +86,27 @@ postsRouter.put('/:postId', async (req, res) => {
         if (!valid) return res.status(400).json({ error: errors });
 
         const postIdFromClient = req.params.postId;
-
         const { title, image, category_id, description, content, status_id } = req.body;
   
-      const query = `
-        UPDATE posts
-        SET title=$1, image=$2, category_id=$3, description=$4, content=$5, status_id=$6
-        WHERE id = $7
-        RETURNING *
-        `;
-
-        const values = [title, image, category_id, description, content, status_id, postIdFromClient];
-
-        const result = await pool.query(query, values)
+        const { data, error } = await supabase
+            .from('posts')
+            .update({
+                title,
+                image,
+                category_id,
+                description,
+                content,
+                status_id
+            })
+            .eq('id', postIdFromClient)
+            .select()
+            .single();
   
+        if (error) throw error;
   
-        res.status(201).json({
-            message: "Post info has been updated sucessfully",
-            data : result.rows[0]
+        res.status(200).json({
+            message: "Post info has been updated successfully",
+            data: data
         });
     } catch (error) {
         console.error("PUT / error:", error);
@@ -104,15 +118,16 @@ postsRouter.delete('/:postId', async (req, res) => {
     try {
       const postIdFromClient = req.params.postId;
 
-      const results = await pool.query(`
-        DELETE FROM posts
-        WHERE id=$1
-        `,[postIdFromClient])
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postIdFromClient);
   
+      if (error) throw error;
   
-        return res.status(200).json({
-            message : "Delete data successfully"
-        });
+      return res.status(200).json({
+          message: "Delete data successfully"
+      });
   
     } catch (err) {
       console.error("DELETE / error:", err);

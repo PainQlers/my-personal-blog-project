@@ -1,6 +1,5 @@
 import 'dotenv/config';
 import express from "express";
-import pool from './utils/db.mjs';
 import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
 import cors from "cors";
@@ -29,7 +28,12 @@ app.get("/api/test" , (req, res) => {
 
 app.get("/api/test1" , async (req, res) => {
     try {
-        const { data, error } = await pool.query('SELECT * FROM users');
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabaseUrl = 'https://dngbgajbvfpzvskalouc.supabase.co';
+        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        const supabase = createClient(supabaseUrl, supabaseKey);
+        
+        const { data, error } = await supabase.from('users').select('*');
         if (error) return res.status(500).json({ error: error.message });
         return res.json(data);
     } catch (err) {
