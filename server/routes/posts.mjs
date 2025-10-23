@@ -53,7 +53,7 @@ postsRouter.get('/:postId', async (req, res) => {
         });
   
     } catch (err) {
-      console.error("POST / error:", err);
+      console.error("GET / error:", err);
       res.status(500).json({ error: err.message });
     }
   });
