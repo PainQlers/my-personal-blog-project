@@ -1,6 +1,12 @@
 import { Router } from "express";
-import pool from "../utils/db.mjs";
+import connectionPool from "../utils/db.mjs";
 import { validateCreatePost, validateUpdatePost } from "../validation/postsValidation.mjs";
+import { createClient } from "@supabase/supabase-js";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
 
 const postsRouter = Router();
 
@@ -19,7 +25,7 @@ postsRouter.post('/', async (req, res) => {
 
         const values = [title, image, category_id, description, content, status_id];
 
-        const result = await pool.query(query, values)
+        const result = await connectionPool.query(query, values)
   
   
         res.status(201).json({
@@ -36,7 +42,7 @@ postsRouter.get('/:postId', async (req, res) => {
     try {
       const postIdFromClient = req.params.postId;
 
-      const results = await pool.query(`
+      const results = await connectionPool.query(`
         SELECT * FROM posts
         WHERE id=$1
         `,[postIdFromClient])
@@ -55,7 +61,7 @@ postsRouter.get('/:postId', async (req, res) => {
 postsRouter.get('/', async (req, res) => {
     try {
 
-      const results = await pool.query(`
+      const results = await connectionPool.query(`
         SELECT * FROM posts
         `)
   
@@ -87,7 +93,7 @@ postsRouter.put('/:postId', async (req, res) => {
 
         const values = [title, image, category_id, description, content, status_id, postIdFromClient];
 
-        const result = await pool.query(query, values)
+        const result = await connectionPool.query(query, values)
   
   
         res.status(201).json({
@@ -104,7 +110,7 @@ postsRouter.delete('/:postId', async (req, res) => {
     try {
       const postIdFromClient = req.params.postId;
 
-      const results = await pool.query(`
+      const results = await connectionPool.query(`
         DELETE FROM posts
         WHERE id=$1
         `,[postIdFromClient])
