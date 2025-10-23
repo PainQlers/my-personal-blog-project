@@ -2,6 +2,7 @@ import express from "express";
 import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
 import cors from "cors";
+import authRouter from "./routes/auth.mjs";
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -12,6 +13,7 @@ app.use(cors());
 // API routes
 app.use('/api/register', registerRouter)
 app.use('/api/posts', postsRouter)
+app.use('/api/auth', authRouter)
 
 // Test routes
 app.get("/api/test" , (req, res) => {

@@ -94,5 +94,7 @@ authRouter.post("/register", async (req, res) => {
       return res.status(500).json({ error: "An error occurred during login" });
     }
   });
+
+  export default authRouter;
   
   
