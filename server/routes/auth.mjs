@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { supabase } from "../utils/db.mjs";
 
 const authRouter = Router();
 
