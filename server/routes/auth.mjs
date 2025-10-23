@@ -3,61 +3,95 @@ import { Router } from "express";
 const authRouter = Router();
 
 authRouter.post("/register", async (req, res) => {
-    const { email, password, username, name } = req.body;
   
     try {
       // ตรวจสอบว่า username มีในฐานข้อมูลหรือไม่
-      const usernameCheckQuery = `
-                                  SELECT * FROM users 
-                                  WHERE username = $1
-                                 `;
-      const usernameCheckValues = [username];
-      const { rows: existingUser } = await connectionPool.query(
-        usernameCheckQuery,
-        usernameCheckValues
-      );
+        const { email, password, username, name } = req.body;
+
+        const { data: existingUsers, error: selectError } = await supabase
+            .from('users')
+            .select('id')
+            .eq("username", username)
+            .limit(1);
+        
+        if(selectError) throw selectError;
+
+        if(existingUsers.length > 0) {
+            return res.status(400).json({ error: "This username is already taken"})
+        }
+
+        const { data: authData, error: authError } = await supabase.auth.signUp({
+            email,
+            password,
+          });
+      
+          if (authError) {
+            if (authError.code === "400" || authError.message.includes("already exists")) {
+              return res
+                .status(400)
+                .json({ error: "User with this email already exists" });
+            }
+            return res.status(400).json({ error: authError.message });
+          }
+      
+          const supabaseUserId = authData.user.id;
+      
+          // 3️⃣ เพิ่มข้อมูลผู้ใช้ใน table users ของ Supabase
+          const { data: insertedUser, error: insertError } = await supabase
+            .from("users")
+            .insert([
+              {
+                id: supabaseUserId, // ใช้ id จาก Auth
+                username,
+                name,
+                role: "user",
+              },
+            ])
+            .select()
+            .single(); // คืนค่า row เดียว
+      
+          if (insertError) throw insertError;
+      
+          res.status(201).json({
+            message: "User created successfully",
+            user: insertedUser,
+          });
+      
+    } catch (error) {
+        console.error("Registration error:", error);
+        res.status(500).json({ error: "An error occurred during registration" });
+    }
+  });
+
+  authRouter.post("/login", async (req, res) => {
+    const { email, password } = req.body;
   
-      if (existingUser.length > 0) {
-        return res.status(400).json({ error: "This username is already taken" });
-      }
-  
-      // สร้างผู้ใช้ใหม่ผ่าน Supabase Auth
-      const { data, error: supabaseError } = await supabase.auth.signUp({
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
   
-      // ตรวจสอบ error จาก Supabase
-      if (supabaseError) {
-        if (supabaseError.code === "user_already_exists") {
-          return res
-            .status(400)
-            .json({ error: "User with this email already exists" });
+      if (error) {
+        if (
+          error.code === "400" ||
+          error.message.includes("Invalid login credentials")
+        ) {
+          return res.status(400).json({
+            error: "Your password is incorrect or this email doesn't exist",
+          });
         }
-        // จัดการกับ error อื่นๆ จาก Supabase
-        return res
-          .status(400)
-          .json({ error: "Failed to create user. Please try again." });
+        return res.status(400).json({ error: error.message });
       }
   
-      const supabaseUserId = data.user.id;
-  
-      // เพิ่มข้อมูลผู้ใช้ในฐานข้อมูล PostgreSQL
-      const query = `
-          INSERT INTO users (id, username, name, role)
-          VALUES ($1, $2, $3, $4)
-          RETURNING *;
-        `;
-  
-      const values = [supabaseUserId, username, name, "user"];
-  
-      const { rows } = await connectionPool.query(query, values);
-      res.status(201).json({
-        message: "User created successfully",
-        user: rows[0],
+      return res.status(200).json({
+        message: "Signed in successfully",
+        access_token: data.session.access_token,
+        user: data.user,
       });
     } catch (error) {
-      res.status(500).json({ error: "An error occurred during registration" });
+      console.error("Login error:", error);
+      return res.status(500).json({ error: "An error occurred during login" });
     }
   });
   
