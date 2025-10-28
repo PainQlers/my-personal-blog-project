@@ -24,7 +24,6 @@ import { useAuth } from "../context/Authentication"
 import NavbarUser from "./NavbarUser"
 import { Link } from "react-router-dom";
 import anonymous from './img/anonymous.webp'
-import bright from './img/Bright-pic.png'
 
 function PostPage() {
   const { id } = useParams();
@@ -33,6 +32,11 @@ function PostPage() {
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [authorInfo, setAuthorInfo] = useState({
+    name: "Author",
+    bio: "",
+    profilePic: null,
+  });
 
   const { isAuthenticated, state } = useAuth();
 
@@ -61,6 +65,22 @@ function PostPage() {
       }
     }
     fetchComments();
+    // fetch site author info (from authors table via API)
+    const fetchAuthor = async () => {
+      try {
+        const res = await axios.get('/api/auth/get-site-author');
+        if (res?.data) {
+          setAuthorInfo({
+            name: res.data.name || 'Author',
+            bio: res.data.bio || '',
+            profilePic: res.data.profile_pic || res.data.profilePic || null,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching author info:', err);
+      }
+    };
+    fetchAuthor();
     // init liked state from localStorage
     const key = `liked_post_${id}`;
     const stored = localStorage.getItem(key);
@@ -212,24 +232,20 @@ function PostPage() {
             <div className="flex flex-row gap-[2vh] p-[2.5vh]">
               <img
                 className="object-cover w-[7vh] h-[7vh] rounded-4xl"
-                src={bright}
+                src={authorInfo.profilePic || anonymous}
                 alt=""
               />
               <div>
                 <p className="text-xs text-[#75716B]">Author</p>
-                <p className="text-lg font-semibold text-[#43403B]">Bright</p>
+                <p className="text-lg font-semibold text-[#43403B]">{authorInfo.name || 'Author'}</p>
               </div>
             </div>
             <div className="flex justify-center lg:w-[40vh]">
                 <hr className="border-t border-gray-300 my-1 mx-auto w-[45vh] lg:w-[35vh]" />
             </div>
-            <p className="p-[2.5vh] text-[#75716B]">
-                I am a pet enthusiast and freelance writer who specializes in
-                animal behavior and care. With a deep love for cats, I enjoy
-                sharing insights on feline companionship and wellness. When i’m
-                not writing, I spends time volunteering at my local animal
-                shelter, helping cats find loving homes.
-              </p>
+            <div className="p-[2.5vh] text-[#75716B] whitespace-pre-wrap">
+              {authorInfo.bio || ''}
+            </div>
           </div>
         </div>
           </div>
