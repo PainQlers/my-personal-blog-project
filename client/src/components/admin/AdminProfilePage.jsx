@@ -36,18 +36,20 @@ export default function AdminProfilePage() {
         },
       });
       
-      // เก็บ bio จาก localStorage ถ้ามี (key: `user_bio_${userId}` หรือ `author_bio` ถ้าเป็น admin)
-      const userId = response.data.id;
-      const isAdmin = response.data.role === 'admin';
-      const savedBio = localStorage.getItem(`user_bio_${userId}`) 
-                      || (isAdmin ? localStorage.getItem('author_bio') : '')
-                      || "";
-      
+      // fetch author bio from authors table
+      let authorBio = "";
+      try {
+        const authorRes = await axios.get("/api/auth/authors/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        authorBio = authorRes?.data?.bio || "";
+      } catch { /* ignore */ }
+
       setProfileData({
         name: response.data.name || "",
         username: response.data.username || "",
         email: response.data.email || "",
-        bio: response.data.bio || savedBio || "",
+        bio: authorBio || response.data.bio || "",
         profilePic: response.data.profilePic || anonymous,
       });
       setPreview(response.data.profilePic || anonymous);
@@ -89,18 +91,17 @@ export default function AdminProfilePage() {
       const token = localStorage.getItem("token");
       
       // ดึง userId จาก auth state หรือ localStorage
-      const authResponse = await axios.get("/api/auth/get-user", {
+      await axios.get("/api/auth/get-user", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
-      const userId = authResponse.data.id;
+      // Response not needed here; profile update call uses token auth
       
       const formData = new FormData();
       formData.append("name", profileData.name);
       formData.append("username", profileData.username);
       
-      // ไม่ส่ง bio ไปที่ API แต่เก็บใน localStorage แทน
       if (selectedFile) {
         formData.append("profilePicFile", selectedFile);
       }
@@ -116,12 +117,16 @@ export default function AdminProfilePage() {
         }
       );
 
-      // เก็บ bio ใน localStorage แยกตาม userId
-      localStorage.setItem(`user_bio_${userId}`, profileData.bio);
-      
-      // ถ้า user เป็น admin ให้เก็บ bio ใน author_bio ด้วย (เพื่อแสดงในหน้า Home)
-      if (authResponse.data.role === 'admin') {
-        localStorage.setItem('author_bio', profileData.bio);
+      // Upsert author bio to authors table
+      try {
+        await axios.put(
+          "/api/auth/authors/me",
+          { bio: profileData.bio },
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+        );
+      } catch (bioErr) {
+        console.error("Error updating author bio:", bioErr);
+        throw bioErr;
       }
 
       // refresh global auth state and cache author avatar for public areas

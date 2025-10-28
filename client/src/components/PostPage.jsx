@@ -1,6 +1,5 @@
 import Navbar from "./Navbar"
 import Footer from "./Footer"
-import Catimage from './img/cat_img.jpg'
 import Heroimage from './img/hero-img.png'
 import { Smile, Facebook, Linkedin, Twitter, Copy } from 'lucide-react';
 import { useParams } from "react-router-dom";
@@ -24,6 +23,8 @@ import { toast } from "sonner"
 import { useAuth } from "../context/Authentication"
 import NavbarUser from "./NavbarUser"
 import { Link } from "react-router-dom";
+import anonymous from './img/anonymous.webp'
+import bright from './img/Bright-pic.png'
 
 function PostPage() {
   const { id } = useParams();
@@ -211,7 +212,7 @@ function PostPage() {
             <div className="flex flex-row gap-[2vh] p-[2.5vh]">
               <img
                 className="object-cover w-[7vh] h-[7vh] rounded-4xl"
-                src={Heroimage}
+                src={bright}
                 alt=""
               />
               <div>
@@ -315,7 +316,7 @@ function PostPage() {
                   src={
                     (c?.user?.profile_pic || c?.user?.profilePic) ||
                     ((state?.user && c?.user?.id && state.user.id === c.user.id) ? (state.user.profilePic || state.user.profile_pic) : null) ||
-                    Heroimage
+                    anonymous
                   }
                   alt=""
                 />
