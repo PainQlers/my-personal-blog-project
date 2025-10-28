@@ -1,6 +1,7 @@
 import { Linkedin } from 'lucide-react';
 import { Github } from 'lucide-react';
 import { AtSign } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 function Footer () {
     return (
@@ -26,7 +27,7 @@ function Footer () {
                 </div>
             </div>
             <div className='flex justify-center lg:mr-35'>
-                <a href="#" className='underline font-medium pt-5 lg:pt-0'>Home Page</a>
+                <Link to="/" className='cursor-pointer underline font-medium pt-5 lg:pt-0 hover:font-bold duration-100'>Home Page</Link>
             </div>
         </footer>
     )

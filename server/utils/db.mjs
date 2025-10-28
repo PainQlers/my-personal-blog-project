@@ -8,8 +8,11 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// สร้าง Supabase client
+// สร้าง Supabase client สำหรับ API calls
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// สร้าง Supabase admin client สำหรับ storage operations
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
 // Optional: helper function เหมือน pg query
 export const query = async (table) => {
