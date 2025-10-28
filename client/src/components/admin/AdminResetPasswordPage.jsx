@@ -52,7 +52,7 @@ export default function AdminResetPasswordPage() {
       }
 
       const response = await axios.put(
-        "http://localhost:4000/api/auth/reset-password",
+        "/api/auth/reset-password",
         {
           oldPassword: password,
           newPassword: newPassword,

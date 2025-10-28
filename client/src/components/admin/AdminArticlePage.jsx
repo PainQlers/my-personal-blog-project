@@ -21,6 +21,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useEffect } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 export default function AdminArticleManagementPage() {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ export default function AdminArticleManagementPage() {
     const fetchAllPosts = async () => {
         try {
             const response = await axios.get(
-                "http://localhost:4000/api/posts",
+                "/api/posts",
                 {
                     params: {
                         page: 1,
@@ -55,6 +56,26 @@ export default function AdminArticleManagementPage() {
   
     fetchAllPosts();
   }, []);
+
+  // Delete post handler
+  const handleDeletePost = async (postId, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/posts/${postId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      // Optimistically update list
+      setAllPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast.success("Post deleted successfully");
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error(error.response?.data?.error || "Failed to delete post");
+    }
+  };
   
   // Filter logic
   const filteredPosts = allPosts.filter((article) => {
@@ -69,7 +90,7 @@ export default function AdminArticleManagementPage() {
     const fetchAllCategory = async () => {
         try {
             const response = await axios.get(
-                "http://localhost:4000/api/category/category"
+                "/api/category/category"
             );
             console.log(response.data.data);
             setAllCategory(response.data.data);
@@ -85,7 +106,7 @@ export default function AdminArticleManagementPage() {
     const fetchsetAllStatus = async () => {
         try {
             const response = await axios.get(
-                "http://localhost:4000/api/posts/status"
+                "/api/posts/status"
             );
             console.log(response.data.data);
             setAllStatus(response.data.data);
@@ -180,10 +201,12 @@ export default function AdminArticleManagementPage() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => navigate(`/admin/article-management/edit/${article.id}`)}>
+                    <Button className="cursor-pointer"
+                    variant="ghost" size="sm" onClick={() => navigate(`/admin/article-management/edit/${article.id}`)}>
                       <PenSquare className="h-4 w-4 hover:text-muted-foreground" />
                     </Button>
-                    <Button variant="ghost" size="sm">
+                    <Button className="cursor-pointer"
+                    variant="ghost" size="sm" onClick={() => handleDeletePost(article.id, article.title)}>
                       <Trash2 className="h-4 w-4 hover:text-muted-foreground" />
                     </Button>
                   </TableCell>

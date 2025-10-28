@@ -20,7 +20,7 @@ function ProfileManagement() {
         const fetchUserData = async () => {
             try {
                 const response = await axios.get(
-                    "http://localhost:4000/api/auth/get-user",
+                    "/api/auth/get-user",
                 );
                 setProfileData(response.data);
             } catch (error) {
@@ -48,7 +48,7 @@ function ProfileManagement() {
         e.preventDefault();
       
         try {
-          const res = await axios.put("http://localhost:4000/api/auth/update-user", profileData);
+          const res = await axios.put("/api/auth/update-user", profileData);
       
           // ✅ ถ้าอัปเดตสำเร็จ
           toast.success("Profile updated successfully!", {

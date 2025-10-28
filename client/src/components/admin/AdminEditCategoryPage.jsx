@@ -18,7 +18,7 @@ export default function AdminEditCategoryPage() {
     const fetchCategory = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:4000/api/category/category/${categoryId}`
+          `/api/category/category/${categoryId}`
         );
         setCategoryName(response.data.data.name);
       } catch (error) {
@@ -42,7 +42,7 @@ export default function AdminEditCategoryPage() {
 
     try {
       await axios.put(
-        `http://localhost:4000/api/category/category/${categoryId}`,
+        `/api/category/category/${categoryId}`,
         { name: categoryName },
         {
           headers: {
@@ -67,7 +67,7 @@ export default function AdminEditCategoryPage() {
 
     try {
       await axios.delete(
-        `http://localhost:4000/api/category/category/${categoryId}`,
+        `/api/category/category/${categoryId}`,
         {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
