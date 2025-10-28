@@ -128,8 +128,9 @@ export default function AdminArticleManagementPage() {
             <SelectTrigger className="w-[180px] py-3 rounded-sm text-muted-foreground focus:ring-0 focus:ring-offset-0 focus:border-muted-foreground">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
+            <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200 mt-1">
+              <SelectItem
+              value="all">All Status</SelectItem>
               {allStatus.map((status) => (
                 <SelectItem key={status.id} value={status.status}>
                   {status.status}
@@ -141,7 +142,7 @@ export default function AdminArticleManagementPage() {
             <SelectTrigger className="w-[180px] py-3 rounded-sm text-muted-foreground focus:ring-0 focus:ring-offset-0 focus:border-muted-foreground">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200 mt-1">
               <SelectItem value="all">All Category</SelectItem>
               {allCategory.map((category) => (
                 <SelectItem key={category.id} value={category.name}>
