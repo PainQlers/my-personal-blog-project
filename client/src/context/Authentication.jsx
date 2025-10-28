@@ -29,7 +29,7 @@ function AuthProvider(props) {
     try {
       setState((prevState) => ({ ...prevState, getUserLoading: true }));
       const response = await axios.get(
-        "http://localhost:4000/api/auth/get-user",
+        "/api/auth/get-user",
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -70,7 +70,7 @@ function AuthProvider(props) {
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       const response = await axios.post(
-        "http://localhost:4000/api/auth/login",
+        "/api/auth/login",
         data
       );
       const token = response.data.token;
@@ -78,7 +78,7 @@ function AuthProvider(props) {
 
       // ดึงและตั้งค่าข้อมูลผู้ใช้ก่อน navigate
       const userResponse = await axios.get(
-        "http://localhost:4000/api/auth/get-user",
+        "/api/auth/get-user",
         {
           headers: {
             Authorization: `Bearer ${token}`
@@ -117,7 +117,7 @@ function AuthProvider(props) {
     try {
       setState((prevState) => ({ ...prevState, loading: true, error: null }));
       await axios.post(
-        "http://localhost:4000/api/auth/register",
+        "/api/auth/register",
         data
       );
       setState((prevState) => ({ ...prevState, loading: false, error: null }));

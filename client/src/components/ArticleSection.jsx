@@ -52,7 +52,7 @@ function ArticleSection () {
 
                 while (currentPage <= totalPages) {
                     const response = await axios.get(
-                        "http://localhost:4000/api/posts",
+                        "/api/posts",
                         {
                             params: {
                                 page: currentPage,
@@ -92,7 +92,7 @@ function ArticleSection () {
         const fetchAllCategory = async () => {
             try {
                 const response = await axios.get(
-                    "http://localhost:4000/api/category/category"
+                    "/api/category/category"
                 );
                 console.log(response.data.data);
                 setAllCategory(response.data.data);

@@ -17,7 +17,7 @@ function HeroSelection() {
   const fetchAuthorInfo = async () => {
     try {
       // Find the first admin user
-      const response = await axios.get('http://localhost:4000/api/auth/get-site-author');
+      const response = await axios.get('/api/auth/get-site-author');
       if (response.data) {
       // เก็บ bio จาก localStorage ถ้ามี (key: `author_bio`)
       const savedBio = localStorage.getItem('author_bio') || response.data.bio || "";

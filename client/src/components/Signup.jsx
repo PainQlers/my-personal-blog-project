@@ -27,7 +27,7 @@ function Signup() {
         e.preventDefault();
     
         try {
-          const res = await axios.post("http://localhost:4000/api/auth/register", formData);
+          const res = await axios.post("/api/auth/register", formData);
           setTimeout(() => navigate("/login"), 1500);
           console.log(res.data);
         } catch (err) {

@@ -19,7 +19,7 @@ export default function AdminCreateCategoryPage() {
     }
     try {
       setIsSubmitting(true);
-      await axios.post("http://localhost:4000/api/category/category", { name: trimmed });
+      await axios.post("/api/category/category", { name: trimmed });
       toast.success("Category created");
       navigate("/admin/category-management");
     } catch (error) {

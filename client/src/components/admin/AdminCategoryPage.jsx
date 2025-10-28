@@ -26,7 +26,7 @@ export default function AdminCategoryManagementPage() {
     const fetchAllcategory = async () => {
         try {
              const response = await axios.get(
-                 "http://localhost:4000/api/category/category"
+                 "/api/category/category"
              );
             console.log(response.data);
             setAllCategory(response.data.data);
@@ -46,7 +46,7 @@ export default function AdminCategoryManagementPage() {
 
     try {
       await axios.delete(
-        `http://localhost:4000/api/category/category/${categoryId}`,
+        `/api/category/category/${categoryId}`,
         {
           headers: {
             "Authorization": `Bearer ${localStorage.getItem("token")}`
@@ -56,7 +56,7 @@ export default function AdminCategoryManagementPage() {
       
       toast.success("Category deleted successfully");
       // Refresh the category list
-      const response = await axios.get("http://localhost:4000/api/category/category");
+      const response = await axios.get("/api/category/category");
       setAllCategory(response.data.data);
     } catch (error) {
       console.error("Error deleting category:", error);

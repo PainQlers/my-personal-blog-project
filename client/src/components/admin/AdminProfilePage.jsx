@@ -30,7 +30,7 @@ export default function AdminProfilePage() {
   const fetchProfileData = async () => {
     try {
       const token = localStorage.getItem("token");
-      const response = await axios.get("http://localhost:4000/api/auth/get-user", {
+      const response = await axios.get("/api/auth/get-user", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -89,7 +89,7 @@ export default function AdminProfilePage() {
       const token = localStorage.getItem("token");
       
       // ดึง userId จาก auth state หรือ localStorage
-      const authResponse = await axios.get("http://localhost:4000/api/auth/get-user", {
+      const authResponse = await axios.get("/api/auth/get-user", {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -106,7 +106,7 @@ export default function AdminProfilePage() {
       }
 
       await axios.put(
-        "http://localhost:4000/api/auth/update-profile",
+        "/api/auth/update-profile",
         formData,
         {
           headers: {
@@ -126,7 +126,7 @@ export default function AdminProfilePage() {
 
       // refresh global auth state and cache author avatar for public areas
       try {
-        const refreshed = await axios.get("http://localhost:4000/api/auth/get-user", {
+        const refreshed = await axios.get("/api/auth/get-user", {
           headers: { Authorization: `Bearer ${token}` }
         });
         const pic = refreshed?.data?.profilePic || refreshed?.data?.profile_pic || null;

@@ -36,7 +36,7 @@ export default function AdminEditArticlePage() {
   useEffect(() => {
     const fetchPost = async () => {
       try {
-        const response = await axios.get(`http://localhost:4000/api/posts/${postId}`);
+        const response = await axios.get(`/api/posts/${postId}`);
         const postData = response.data.data;
         setPost({
           title: postData.title || "",
@@ -59,7 +59,7 @@ export default function AdminEditArticlePage() {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get("http://localhost:4000/api/category/category");
+        const response = await axios.get("/api/category/category");
         setCategories(response.data.data);
       } catch (error) {
         console.error("Error fetching categories:", error);
@@ -72,7 +72,7 @@ export default function AdminEditArticlePage() {
   useEffect(() => {
     const fetchStatuses = async () => {
       try {
-        const response = await axios.get("http://localhost:4000/api/posts/status");
+        const response = await axios.get("/api/posts/status");
         setStatuses(response.data.data);
       } catch (error) {
         console.error("Error fetching statuses:", error);
@@ -132,7 +132,7 @@ export default function AdminEditArticlePage() {
       };
 
       const response = await axios.put(
-        `http://localhost:4000/api/posts/${postId}`,
+        `/api/posts/${postId}`,
         updateData,
         {
           headers: {

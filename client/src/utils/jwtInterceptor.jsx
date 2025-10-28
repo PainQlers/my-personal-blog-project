@@ -1,6 +1,10 @@
 import axios from "axios";
 
 function jwtInterceptor() {
+  // Set global API base URL once for all axios requests
+  const defaultBaseUrl = "https://my-personal-blog-project-lsig.vercel.app";
+  axios.defaults.baseURL = import.meta?.env?.VITE_API_BASE_URL || defaultBaseUrl;
+
   axios.interceptors.request.use((req) => {
     const hasToken = Boolean(window.localStorage.getItem("token"));
 

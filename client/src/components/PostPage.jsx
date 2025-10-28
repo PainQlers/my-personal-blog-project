@@ -39,7 +39,7 @@ function PostPage() {
     const fetchPosts = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:4000/api/posts/${id}`
+          `/api/posts/${id}`
         );
           console.log(response.data);
           // local API returns { data: post }
@@ -51,7 +51,7 @@ function PostPage() {
     fetchPosts();
     const fetchComments = async () => {
       try {
-        const res = await axios.get('http://localhost:4000/api/comments', {
+        const res = await axios.get('/api/comments', {
           params: { post_id: id }
         });
         setComments(res?.data?.data || []);
@@ -121,7 +121,7 @@ function PostPage() {
       setLiked(!liked);
       localStorage.setItem(`liked_post_${id}`,'true' === localStorage.getItem(`liked_post_${id}`) ? (!liked).toString() : (!liked).toString());
 
-      const res = await axios.patch(`http://localhost:4000/api/posts/${id}/likes`, { action: nextAction });
+      const res = await axios.patch(`/api/posts/${id}/likes`, { action: nextAction });
       if (res?.data?.data?.likes_count !== undefined) {
         setPost(prev => ({ ...(prev || {}), likes_count: res.data.data.likes_count }));
       }
@@ -163,7 +163,7 @@ function PostPage() {
 
     try {
       const res = await axios.post(
-        'http://localhost:4000/api/comments',
+        '/api/comments',
         { post_id: id, comment_text: optimistic.comment_text },
         { headers: { Authorization: `Bearer ${token}` } }
       );
