@@ -1,33 +1,57 @@
 import 'dotenv/config';
 import express from "express";
-import pool from './utils/db.mjs';
-import registerRouter from './routes/register.mjs';
 import postsRouter from './routes/posts.mjs';
 import cors from "cors";
-import { createServer } from "@vercel/node";
+import authRouter from "./routes/auth.mjs";
+import { supabase } from './utils/db.mjs';
+import categoryRouter from './routes/category.mjs';
+import commentsRouter from './routes/comments.mjs';
+
 
 const app = express();
 const port = process.env.PORT || 4000;
-const router = express.Router();
     
 app.use(express.json());
 app.use(cors());
 
-app.use('/register', registerRouter)
-app.use('/posts', postsRouter)
+// API routes
+app.use('/api/posts', postsRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/category', categoryRouter)
+app.use('/api/comments', commentsRouter)
 
-app.get("/test" , (req, res) => {
-    return res.json({message : `Server is working`});
+// Test routes
+app.get("/api/test" , (req, res) => {
+    return res.json({
+        message: `Server is working`,
+        env: {
+            hasConnectionString: !!process.env.CONNECTION_STRING,
+            hasPort: !!process.env.PORT,
+            nodeEnv: process.env.NODE_ENV
+        }
+    });
 })
 
-app.get("/test1" , async (req, res) => {
-    const { data, error } = await pool.query('SELECT * FROM users');
-  if (error) return res.status(500).json({ error: error.message });
-  return res.json(data);
+app.get("/api/test1" , async (req, res) => {
+    try {
+        const { data, error } = await supabase.from('users').select('*');
+        if (error) return res.status(500).json({ error: error.message });
+        return res.json(data);
+    } catch (err) {
+        return res.status(500).json({ error: err.message });
+    }
 })
 
-app.listen(port, () => {
-    console.log(`Server is running at ${port}`);
+// Health check
+app.get("/", (req, res) => {
+    res.json({ message: "API is running" });
 });
 
-export default createServer(app);
+// Only start server if not in Vercel environment
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(port, () => {
+        console.log(`Server is running at ${port}`);
+    });
+}
+
+export default app;
