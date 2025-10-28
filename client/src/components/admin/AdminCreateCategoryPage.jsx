@@ -1,8 +1,35 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AdminSidebar } from "@/components/AdminWebSection";
+import { useState } from "react";
+import axios from "axios";
+import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminCreateCategoryPage() {
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const navigate = useNavigate();
+
+  const handleSave = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) {
+      toast.error("Please enter category name");
+      return;
+    }
+    try {
+      setIsSubmitting(true);
+      await axios.post("/api/category/category", { name: trimmed });
+      toast.success("Category created");
+      navigate("/admin/category-management");
+    } catch (error) {
+      const message = error.response?.data?.error || "Failed to create category";
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -11,7 +38,9 @@ export default function AdminCreateCategoryPage() {
       <main className="flex-1 p-8 bg-gray-50 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Create Category</h2>
-          <Button className="px-8 py-2 rounded-full">Save</Button>
+          <Button className="px-8 py-2 rounded-full" onClick={handleSave} disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save"}
+          </Button>
         </div>
         <div className="space-y-7 max-w-md">
           <div className="relative">
@@ -22,10 +51,12 @@ export default function AdminCreateCategoryPage() {
               Category Name
             </label>
             <Input
-              id="current-password"
-              type="password"
+              id="category-name"
+              type="text"
               placeholder="Category name"
               className="mt-1 py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
             />
           </div>
         </div>

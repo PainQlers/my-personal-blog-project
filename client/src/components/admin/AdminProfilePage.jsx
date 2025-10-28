@@ -1,10 +1,171 @@
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AdminSidebar } from "@/components/AdminWebSection";
+import axios from "axios";
+import { toast } from "sonner";
+import { useAuth } from "../../context/Authentication";
+import anonymous from "../img/anonymous.webp";
 
 export default function AdminProfilePage() {
+  const [loading, setLoading] = useState(false);
+  const [profileData, setProfileData] = useState({
+    name: "",
+    username: "",
+    email: "",
+    bio: "",
+    profilePic: "",
+  });
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [preview, setPreview] = useState(null);
+  const fileInputRef = useRef(null);
+  const { fetchUser } = useAuth();
+
+  useEffect(() => {
+    fetchProfileData();
+  }, []);
+
+  const fetchProfileData = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await axios.get("/api/auth/get-user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+      // fetch author bio from authors table
+      let authorBio = "";
+      try {
+        const authorRes = await axios.get("/api/auth/authors/me", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        authorBio = authorRes?.data?.bio || "";
+      } catch { /* ignore */ }
+
+      setProfileData({
+        name: response.data.name || "",
+        username: response.data.username || "",
+        email: response.data.email || "",
+        bio: authorBio || response.data.bio || "",
+        profilePic: response.data.profilePic || anonymous,
+      });
+      setPreview(response.data.profilePic || anonymous);
+    } catch (error) {
+      console.error("Error fetching profile data:", error);
+      toast.error("Failed to fetch profile data");
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setProfileData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem("token");
+      
+      // ดึง userId จาก auth state หรือ localStorage
+      await axios.get("/api/auth/get-user", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      // Response not needed here; profile update call uses token auth
+      
+      const formData = new FormData();
+      formData.append("name", profileData.name);
+      formData.append("username", profileData.username);
+      
+      if (selectedFile) {
+        formData.append("profilePicFile", selectedFile);
+      }
+
+      await axios.put(
+        "/api/auth/update-profile",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      // Upsert author bio to authors table
+      try {
+        await axios.put(
+          "/api/auth/authors/me",
+          { bio: profileData.bio },
+          { headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" } }
+        );
+      } catch (bioErr) {
+        console.error("Error updating author bio:", bioErr);
+        throw bioErr;
+      }
+
+      // refresh global auth state and cache author avatar for public areas
+      try {
+        const refreshed = await axios.get("/api/auth/get-user", {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        const pic = refreshed?.data?.profilePic || refreshed?.data?.profile_pic || null;
+        if (pic) {
+          localStorage.setItem('author_profile_pic', pic);
+        }
+        // update global auth context so NavbarUser and others re-render
+        fetchUser?.();
+      } catch { /* no-op */ }
+
+      toast.success("Profile updated successfully!", {
+        duration: 3000,
+      });
+      
+      // Refresh profile data
+      await fetchProfileData();
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      toast.error(error.response?.data?.error || "Failed to update profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get initials for avatar fallback
+  const getInitials = () => {
+    return profileData.name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -13,27 +174,41 @@ export default function AdminProfilePage() {
       <main className="flex-1 p-8 bg-gray-50 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Profile</h2>
-          <Button className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white">Save</Button>
+          <Button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white disabled:opacity-50 hover:scale-102 duration-200"
+          >
+            {loading ? "Saving..." : "Save"}
+          </Button>
         </div>
 
         <div>
           <div className="flex items-center mb-6">
             <Avatar className="w-24 h-24 mr-4">
-              <AvatarImage
-                src="/placeholder.svg?height=96&width=96"
-                alt="Profile picture"
-              />
-              <AvatarFallback>TP</AvatarFallback>
+              <AvatarImage src={preview || anonymous} alt="Profile picture" />
+              <AvatarFallback>{getInitials()}</AvatarFallback>
             </Avatar>
-            <Button variant="outline">Upload profile picture</Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept="image/*"
+              className="hidden"
+            />
+            <Button variant="outline" onClick={handleUploadClick}>
+              Upload profile picture
+            </Button>
           </div>
 
-          <form className="space-y-7 max-w-2xl">
+          <form className="space-y-7 max-w-2xl" onSubmit={handleSubmit}>
             <div>
               <label htmlFor="name">Name</label>
               <Input
                 id="name"
-                defaultValue="Thompson P."
+                name="name"
+                value={profileData.name}
+                onChange={handleInputChange}
                 className="mt-1 py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
               />
             </div>
@@ -41,7 +216,9 @@ export default function AdminProfilePage() {
               <label htmlFor="username">Username</label>
               <Input
                 id="username"
-                defaultValue="thompson"
+                name="username"
+                value={profileData.username}
+                onChange={handleInputChange}
                 className="mt-1 py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
               />
             </div>
@@ -49,20 +226,26 @@ export default function AdminProfilePage() {
               <label htmlFor="email">Email</label>
               <Input
                 id="email"
+                name="email"
                 type="email"
-                defaultValue="thompson.p@gmail.com"
-                className="mt-1 py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
+                value={profileData.email}
+                disabled
+                className="mt-1 py-3 rounded-sm bg-gray-200 placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
               />
+              <p className="text-xs text-muted-foreground mt-1">
+                Email cannot be changed
+              </p>
             </div>
             <div>
-              <label htmlFor="bio">Bio (max 120 letters)</label>
+              <label htmlFor="bio">Bio</label>
               <Textarea
                 id="bio"
-                defaultValue="I am a pet enthusiast and freelance writer who specializes in animal behavior and care. With a deep love for cats, I enjoy sharing insights on feline companionship and wellness.
-
-When I'm not writing, I spends time volunteering at my local animal shelter, helping cats find loving homes."
+                name="bio"
+                value={profileData.bio}
+                onChange={handleInputChange}
                 rows={10}
                 className="mt-1 py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
+                placeholder="Tell us about yourself..."
               />
             </div>
           </form>

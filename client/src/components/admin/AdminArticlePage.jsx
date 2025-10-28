@@ -18,44 +18,106 @@ import {
 } from "@/components/ui/table";
 import { AdminSidebar } from "@/components/AdminWebSection";
 import { useNavigate } from "react-router-dom";
-
-const articles = [
-  {
-    title:
-      "Understanding Cat Behavior: Why Your Feline Friend Acts the Way They Do",
-    category: "Cat",
-    status: "Published",
-  },
-  {
-    title: "The Fascinating World of Cats: Why We Love Our Furry Friends",
-    category: "Cat",
-    status: "Published",
-  },
-  {
-    title: "Finding Motivation: How to Stay Inspired Through Life's Challenges",
-    category: "General",
-    status: "Published",
-  },
-  {
-    title:
-      "The Science of the Cat's Purr: How It Benefits Cats and Humans Alike",
-    category: "Cat",
-    status: "Published",
-  },
-  {
-    title: "Top 10 Health Tips to Keep Your Cat Happy and Healthy",
-    category: "Cat",
-    status: "Published",
-  },
-  {
-    title: "Unlocking Creativity: Simple Habits to Spark Inspiration Daily",
-    category: "Inspiration",
-    status: "Published",
-  },
-];
+import { useState } from "react";
+import { useEffect } from "react";
+import axios from "axios";
+import { toast } from "sonner";
 
 export default function AdminArticleManagementPage() {
   const navigate = useNavigate();
+
+  const [ allPosts, setAllPosts ] = useState([]);
+  const [ allCategory, setAllCategory ] = useState([]);
+  const [ allStatus, setAllStatus ] = useState([]);
+  
+  // Filter states
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("all");
+
+  useEffect(() => {
+    const fetchAllPosts = async () => {
+        try {
+            const response = await axios.get(
+                "/api/posts",
+                {
+                    params: {
+                        page: 1,
+                        limit: 100 // ดึงข้อมูลจำนวนมากสำหรับค้นหา
+                    }
+                }
+            );
+            console.log(response.data.data);
+            setAllPosts(response.data.data);
+        } catch (error) {
+            console.error("Error fetching all posts:", error);
+        }
+    };
+  
+    fetchAllPosts();
+  }, []);
+
+  // Delete post handler
+  const handleDeletePost = async (postId, title) => {
+    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
+      return;
+    }
+    try {
+      await axios.delete(`/api/posts/${postId}`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      // Optimistically update list
+      setAllPosts((prev) => prev.filter((p) => p.id !== postId));
+      toast.success("Post deleted successfully");
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      toast.error(error.response?.data?.error || "Failed to delete post");
+    }
+  };
+  
+  // Filter logic
+  const filteredPosts = allPosts.filter((article) => {
+    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === "all" || article.statuses?.status === selectedStatus;
+    const matchesCategory = selectedCategory === "all" || article.categories?.name === selectedCategory;
+    
+    return matchesSearch && matchesStatus && matchesCategory;
+  });
+
+  useEffect(() => {
+    const fetchAllCategory = async () => {
+        try {
+            const response = await axios.get(
+                "/api/category/category"
+            );
+            console.log(response.data.data);
+            setAllCategory(response.data.data);
+        } catch (error) {
+            console.error("Error fetching all posts:", error);
+        }
+    };
+  
+    fetchAllCategory();
+  }, []);
+
+  useEffect(() => {
+    const fetchsetAllStatus = async () => {
+        try {
+            const response = await axios.get(
+                "/api/posts/status"
+            );
+            console.log(response.data.data);
+            setAllStatus(response.data.data);
+        } catch (error) {
+            console.error("Error fetching all posts:", error);
+        }
+    };
+  
+    fetchsetAllStatus();
+  }, []);
+  
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
@@ -66,7 +128,7 @@ export default function AdminArticleManagementPage() {
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Article management</h2>
           <Button
-            className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white"
+            className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white hover:scale-102 duration-200"
             onClick={() => navigate("/admin/article-management/create")}
           >
             <PenSquare color="white" className="mr-2 h-4 w-4" /> Create article
@@ -78,26 +140,36 @@ export default function AdminArticleManagementPage() {
             <Input
               type="text"
               placeholder="Search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full py-3 rounded-sm placeholder:text-muted-foreground focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:border-muted-foreground"
             />
           </div>
-          <Select>
+          <Select value={selectedStatus} onValueChange={setSelectedStatus}>
             <SelectTrigger className="w-[180px] py-3 rounded-sm text-muted-foreground focus:ring-0 focus:ring-offset-0 focus:border-muted-foreground">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="published">Published</SelectItem>
-              <SelectItem value="draft">Draft</SelectItem>
+            <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200 mt-1">
+              <SelectItem
+              value="all">All Status</SelectItem>
+              {allStatus.map((status) => (
+                <SelectItem key={status.id} value={status.status}>
+                  {status.status}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Select>
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
             <SelectTrigger className="w-[180px] py-3 rounded-sm text-muted-foreground focus:ring-0 focus:ring-offset-0 focus:border-muted-foreground">
               <SelectValue placeholder="Category" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="cat">Cat</SelectItem>
-              <SelectItem value="general">General</SelectItem>
-              <SelectItem value="inspiration">Inspiration</SelectItem>
+            <SelectContent className="bg-white rounded-xl shadow-lg border border-gray-200 mt-1">
+              <SelectItem value="all">All Category</SelectItem>
+              {allCategory.map((category) => (
+                <SelectItem key={category.id} value={category.name}>
+                  {category.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -112,25 +184,35 @@ export default function AdminArticleManagementPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {articles.map((article, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">{article.title}</TableCell>
-                <TableCell>{article.category}</TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
-                    {article.status}
-                  </span>
-                </TableCell>
-                <TableCell className="text-right">
-                  <Button variant="ghost" size="sm">
-                    <PenSquare className="h-4 w-4 hover:text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="sm">
-                    <Trash2 className="h-4 w-4 hover:text-muted-foreground" />
-                  </Button>
+            {filteredPosts.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  No articles found matching your filters
                 </TableCell>
               </TableRow>
-            ))}
+            ) : (
+              filteredPosts.map((article, index) => (
+                <TableRow key={article.id || index}>
+                  <TableCell className="font-medium">{article.title}</TableCell>
+                  <TableCell>{article.categories?.name}</TableCell>
+                  <TableCell>
+                    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                      {article.statuses?.status}
+                    </span>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button className="cursor-pointer"
+                    variant="ghost" size="sm" onClick={() => navigate(`/admin/article-management/edit/${article.id}`)}>
+                      <PenSquare className="h-4 w-4 hover:text-muted-foreground" />
+                    </Button>
+                    <Button className="cursor-pointer"
+                    variant="ghost" size="sm" onClick={() => handleDeletePost(article.id, article.title)}>
+                      <Trash2 className="h-4 w-4 hover:text-muted-foreground" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </main>

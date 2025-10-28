@@ -1,12 +1,25 @@
 import { Router } from "express";
-import { supabase } from "../utils/db.mjs";
+import { supabase, supabaseAdmin } from "../utils/db.mjs";
+import multer from "multer";
+import protectUser from "../middleware/protectUser.mjs";
 
 const authRouter = Router();
+
+const multerUpload = multer({ storage: multer.memoryStorage() });
+
+const imageFileUpload = multerUpload.fields([
+  { name: "profilePicFile", maxCount: 1 },
+]);
 
 authRouter.post("/register", async (req, res) => {
   
     try {
         const { email, password, username, name } = req.body;
+
+        // ตรวจสอบ input
+        if (!email || !password || !username || !name) {
+            return res.status(400).json({ error: "All fields are required" });
+        }
 
         // ตรวจสอบว่า username มีในฐานข้อมูลหรือไม่
         const { data: existingUsers, error: selectError } = await supabase
@@ -21,7 +34,7 @@ authRouter.post("/register", async (req, res) => {
             return res.status(400).json({ error: "This username is already taken"})
         }
 
-        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        const { data: authData, error: authError } = await supabase.auth.signUp({
             email,
             password,
           });
@@ -32,6 +45,7 @@ authRouter.post("/register", async (req, res) => {
                 .status(400)
                 .json({ error: "User with this email already exists" });
             }
+            console.log(authError.message);
             return res.status(400).json({ error: authError.message });
           }
       
@@ -64,8 +78,13 @@ authRouter.post("/register", async (req, res) => {
     }
   });
 
-  authRouter.post("/login", async (req, res) => {
+authRouter.post("/login", async (req, res) => {
     const { email, password } = req.body;
+  
+    // ตรวจสอบ input
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
+    }
   
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -87,7 +106,7 @@ authRouter.post("/register", async (req, res) => {
   
       return res.status(200).json({
         message: "Signed in successfully",
-        access_token: data.session.access_token,
+        token: data.session.access_token, // เปลี่ยนจาก access_token เป็น token
         user: data.user,
       });
     } catch (error) {
@@ -96,6 +115,369 @@ authRouter.post("/register", async (req, res) => {
     }
   });
 
-  export default authRouter;
+authRouter.get("/get-user", async (req, res) => {
+    const token = req.headers.authorization?.split(" ")[1];
+  
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+  
+    try {
+      // ✅ ตรวจสอบ token และดึงข้อมูลผู้ใช้จาก Supabase Auth
+      const { data, error } = await supabase.auth.getUser(token);
+  
+      if (error || !data.user) {
+        return res.status(401).json({ error: "Unauthorized or token expired" });
+      }
+  
+      const supabaseUserId = data.user.id;
+  
+      // ✅ ใช้ Supabase Query แทนการ query ด้วย SQL ตรง ๆ
+      const { data: userRows, error: userError } = await supabase
+        .from("users")
+        .select("id, username, name, role, profile_pic, bio")
+        .eq("id", supabaseUserId)
+        .single();
+
+      if (userError) {
+        console.error("Supabase query error:", userError);
+        // ถ้า error เกี่ยวกับ bio column ที่ไม่มีอยู่ ให้ลอง query โดยไม่ select bio
+        if (userError.message && userError.message.includes('bio')) {
+          const { data: userRowsFallback, error: userErrorFallback } = await supabase
+            .from("users")
+            .select("id, username, name, role, profile_pic")
+            .eq("id", supabaseUserId)
+            .single();
+
+          if (userErrorFallback) {
+            return res.status(400).json({ error: "Failed to fetch user details" });
+          }
+
+          return res.status(200).json({
+            id: data.user.id,
+            email: data.user.email,
+            username: userRowsFallback.username,
+            name: userRowsFallback.name,
+            role: userRowsFallback.role,
+            profilePic: userRowsFallback.profile_pic,
+            bio: "",
+          });
+        }
+        return res.status(400).json({ error: "Failed to fetch user details" });
+      }
+
+      // ✅ รวมข้อมูลจาก Auth และ Table users
+      res.status(200).json({
+        id: data.user.id,
+        email: data.user.email,
+        username: userRows.username,
+        name: userRows.name,
+        role: userRows.role,
+        profilePic: userRows.profile_pic,
+        bio: userRows.bio || "",
+      });
+    } catch (err) {
+      console.error("Internal error:", err);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+// 🧩 Reset Password API
+authRouter.put("/reset-password", async (req, res) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  const { oldPassword, newPassword } = req.body;
+
+  // ตรวจสอบ token และข้อมูลที่จำเป็น
+  if (!token) {
+    return res.status(401).json({ error: "Unauthorized: Token missing" });
+  }
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ error: "Old and new password required" });
+  }
+
+  try {
+    // 1️⃣ ตรวจสอบ token -> เอา user ออกมา
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const email = userData.user.email;
+
+    // 2️⃣ ตรวจสอบรหัสผ่านเดิมโดยพยายาม Sign in อีกครั้ง
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({
+      email,
+      password: oldPassword,
+    });
+
+    if (loginError || !loginData?.session) {
+      return res.status(400).json({ error: "Invalid old password" });
+    }
+
+    // 3️⃣ อัปเดตรหัสผ่านใหม่ (ใช้ session ปัจจุบัน)
+    const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (updateError) {
+      return res.status(400).json({ error: updateError.message });
+    }
+
+    res.status(200).json({
+      message: "Password updated successfully",
+      user: updateData.user,
+    });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Update profile endpoint
+authRouter.put("/update-profile", protectUser, imageFileUpload, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    // Get user from token
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const supabaseUserId = userData.user.id;
+    const { name, username, bio } = req.body;
+
+    // Check required fields
+    if (!name || !username) {
+      return res.status(400).json({ error: "Name and username are required" });
+    }
+
+    let profilePicUrl = null;
+
+    // Handle file upload if present
+    if (req.files && req.files.profilePicFile && req.files.profilePicFile.length > 0) {
+      const file = req.files.profilePicFile[0];
+      const bucketName = "my-personal-blog";
+      const filePath = `profiles/${supabaseUserId}_${Date.now()}_${file.originalname}`;
+
+      // Upload to Supabase Storage
+      const { data: imageFile, error: errorFile } = await supabaseAdmin.storage
+        .from(bucketName)
+        .upload(filePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+
+      if (errorFile) {
+        console.error("Storage upload error:", errorFile);
+        throw errorFile;
+      }
+
+      // Get public URL
+      const { data: urlData } = supabaseAdmin.storage.from(bucketName).getPublicUrl(imageFile.path);
+      profilePicUrl = urlData.publicUrl;
+    }
+
+    // Prepare update data
+    const updateData = { name, username };
+    if (bio !== undefined) {
+      updateData.bio = bio;
+    }
+    if (profilePicUrl) {
+      updateData.profile_pic = profilePicUrl;
+    }
+
+    // Update user in database
+    const { data, error } = await supabase
+      .from("users")
+      .update(updateData)
+      .eq("id", supabaseUserId)
+      .select();
+
+    if (error) {
+      // ถ้า error เกี่ยวกับ bio column ที่ไม่มี ให้ลอง update โดยไม่รวม bio
+      if (error.message && error.message.includes('bio')) {
+        const { bio: bioValue, ...updateDataWithoutBio } = updateData;
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("users")
+          .update(updateDataWithoutBio)
+          .eq("id", supabaseUserId)
+          .select();
+
+        if (fallbackError) throw fallbackError;
+        
+        return res.status(200).json({
+          message: "Profile updated successfully (bio column not available)",
+          user: fallbackData[0],
+        });
+      }
+      throw error;
+    }
+
+    return res.status(200).json({
+      message: "Profile updated successfully",
+      user: data[0],
+    });
+  } catch (err) {
+    console.error("Update profile error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
+  }
+});
+
+authRouter.put("/update-user", async (req, res) => {
+  try {
+    const { id, name, username } = req.body;
+
+    // ตรวจสอบ input
+    if (!id || !name || !username) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    // ====== ตัวอย่างถ้าใช้ Supabase ======
+    const { data, error } = await supabase
+      .from("users")
+      .update({ name, username })
+      .eq("id", id)
+      .select();
+
+    if (error) throw error;
+
+    return res.status(200).json({
+      message: "User updated successfully",
+      user: data[0],
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+});
+  
+  
+  
+// Get site author (first admin user) for display on homepage
+authRouter.get("/get-site-author", async (req, res) => {
+  try {
+    // Find first admin user
+    const { data: adminUser, error: adminError } = await supabase
+      .from("users")
+      .select("id, name, profile_pic")
+      .eq("role", "admin")
+      .limit(1)
+      .single();
+
+    if (adminError || !adminUser) {
+      return res.status(400).json({ error: "Failed to fetch author info" });
+    }
+
+    // Fetch bio from authors table
+    const { data: authorRow, error: authorError } = await supabase
+      .from("authors")
+      .select("bio")
+      .eq("user_id", adminUser.id)
+      .limit(1)
+      .single();
+
+    const bio = authorError ? "" : (authorRow?.bio || "");
+
+    res.status(200).json({
+      name: adminUser.name,
+      profile_pic: adminUser.profile_pic,
+      bio,
+    });
+  } catch (err) {
+    console.error("Get author error:", err);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get current user's author bio (from authors table)
+authRouter.get("/authors/me", protectUser, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const supabaseUserId = userData.user.id;
+
+    const { data: authorRow, error } = await supabase
+      .from("authors")
+      .select("id, user_id, bio, created_at, updated_at")
+      .eq("user_id", supabaseUserId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return res.status(200).json(authorRow || { user_id: supabaseUserId, bio: "" });
+  } catch (err) {
+    console.error("GET /authors/me error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
+  }
+});
+
+// Upsert current user's author bio
+authRouter.put("/authors/me", protectUser, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const { bio } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+    if (bio === undefined) {
+      return res.status(400).json({ error: "Bio is required" });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const supabaseUserId = userData.user.id;
+
+    // Check existing author row
+    const { data: existing, error: fetchError } = await supabase
+      .from("authors")
+      .select("id")
+      .eq("user_id", supabaseUserId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from("authors")
+        .update({ bio, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res.status(200).json({ message: "Bio updated", data });
+    } else {
+      const { data, error } = await supabase
+        .from("authors")
+        .insert([{ user_id: supabaseUserId, bio }])
+        .select()
+        .single();
+      if (error) throw error;
+      return res.status(201).json({ message: "Bio created", data });
+    }
+  } catch (err) {
+    console.error("PUT /authors/me error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
+  }
+});
+
+export default authRouter;
   
   

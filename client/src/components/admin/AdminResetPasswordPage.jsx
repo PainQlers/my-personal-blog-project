@@ -11,6 +11,7 @@ import {
   AlertDialogCancel,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
+import axios from "axios";
 
 export default function AdminResetPasswordPage() {
   const [password, setPassword] = useState("");
@@ -22,6 +23,7 @@ export default function AdminResetPasswordPage() {
     confirmNewPassword: true,
   });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -41,26 +43,72 @@ export default function AdminResetPasswordPage() {
     }
   };
 
-  const handleResetPassword = () => {
-    // Add PUT API to reset password
-    toast.custom((t) => (
-      <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
-        <div>
-          <h2 className="font-bold text-lg mb-1">Reset!</h2>
-          <p className="text-sm">
-            Password reset successful. You can now log in with your new
-            password.
-          </p>
+  const handleResetPassword = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        throw new Error("No token found. Please log in again.");
+      }
+
+      const response = await axios.put(
+        "/api/auth/reset-password",
+        {
+          oldPassword: password,
+          newPassword: newPassword,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.data.message === "Password updated successfully") {
+        toast.custom((t) => (
+          <div className="bg-green-500 text-white p-4 rounded-sm flex justify-between items-start">
+            <div>
+              <h2 className="font-bold text-lg mb-1">Reset!</h2>
+              <p className="text-sm">
+                Password reset successful. You can now log in with your new
+                password.
+              </p>
+            </div>
+            <button
+              onClick={() => toast.dismiss(t)}
+              className="text-white hover:text-gray-200"
+            >
+              <X size={20} />
+            </button>
+          </div>
+        ));
+        
+        // Reset form
+        setPassword("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setIsDialogOpen(false);
+      }
+    } catch (error) {
+      console.error("Reset password error:", error);
+      const errorMessage = error.response?.data?.error || error.message || "Failed to reset password";
+      toast.custom((t) => (
+        <div className="bg-red-500 text-white p-4 rounded-sm flex justify-between items-start">
+          <div>
+            <h2 className="font-bold text-lg mb-1">Error!</h2>
+            <p className="text-sm">{errorMessage}</p>
+          </div>
+          <button
+            onClick={() => toast.dismiss(t)}
+            className="text-white hover:text-gray-200"
+          >
+            <X size={20} />
+          </button>
         </div>
-        <button
-          onClick={() => toast.dismiss(t)}
-          className="text-white hover:text-gray-200"
-        >
-          <X size={20} />
-        </button>
-      </div>
-    ));
-    setIsDialogOpen(false);
+      ));
+    } finally {
+      setIsLoading(false);
+    }
   };
   return (
     <div className="flex h-screen bg-gray-100">
@@ -68,14 +116,20 @@ export default function AdminResetPasswordPage() {
       <AdminSidebar />
       {/* Main content */}
       <main className="flex-1 p-8 bg-gray-50 overflow-auto">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-semibold">Reset Password</h2>
-          <Button className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white" onClick={handleSubmit}>
-            Reset Password
-          </Button>
-        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-semibold">Reset Password</h2>
+            <Button 
+              type="submit"
+              className="cursor-pointer px-8 py-2 rounded-full bg-[#26231E] text-white hover:scale-102 duration-200" 
+              onClick={handleSubmit}
+              disabled={isLoading}
+            >
+              {isLoading ? "Resetting..." : "Reset Password"}
+            </Button>
+          </div>
 
-        <div className="space-y-7 max-w-md">
+          <div className="space-y-7 max-w-md">
           <div className="relative">
             <label
               htmlFor="current-password"
@@ -145,18 +199,20 @@ export default function AdminResetPasswordPage() {
               </p>
             )}
           </div>
-        </div>
+          </div>
+        </form>
       </main>
       <ResetPasswordModal
         dialogState={isDialogOpen}
         setDialogState={setIsDialogOpen}
         resetFunction={handleResetPassword}
+        isLoading={isLoading}
       />
     </div>
   );
 }
 
-function ResetPasswordModal({ dialogState, setDialogState, resetFunction }) {
+function ResetPasswordModal({ dialogState, setDialogState, resetFunction, isLoading }) {
   return (
     <AlertDialog open={dialogState} onOpenChange={setDialogState}>
       <AlertDialogContent className="bg-white rounded-md pt-16 pb-6 max-w-[22rem] sm:max-w-md flex flex-col items-center">
@@ -169,18 +225,20 @@ function ResetPasswordModal({ dialogState, setDialogState, resetFunction }) {
         <div className="flex flex-row gap-4">
           <button
             onClick={() => setDialogState(false)}
-            className="bg-background px-10 py-4 rounded-full text-foreground border border-foreground hover:border-muted-foreground hover:text-muted-foreground transition-colors"
+            disabled={isLoading}
+            className="px-10 py-4 rounded-full text-gray-700 bg-gray-100 hover:bg-gray-200 border-2 border-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             onClick={resetFunction}
-            className="rounded-full text-white bg-foreground hover:bg-muted-foreground transition-colors py-4 text-lg px-10 "
+            disabled={isLoading}
+            className="rounded-full text-white bg-[#26231E] hover:bg-[#3a3530] transition-colors py-4 text-lg px-10 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Reset
+            {isLoading ? "Resetting..." : "Reset"}
           </button>
         </div>
-        <AlertDialogCancel className="absolute right-4 top-2 sm:top-4 p-1 border-none">
+        <AlertDialogCancel disabled={isLoading} className="absolute right-4 top-2 sm:top-4 p-1 border-none">
           <X className="h-6 w-6" />
         </AlertDialogCancel>
       </AlertDialogContent>

@@ -15,13 +15,14 @@ import axios from 'axios';
 
 function ArticleSection () {
     const [ category, setCategory ] = useState("Highlight");
-    const [posts, setPosts] = useState([]);
-    const [page, setPage] = useState(1);
+    const [posts, setPosts] = useState([]); // visible posts for current page/category/search
+    const [page, setPage] = useState(1); // client-side page
     const [hasMore, setHasMore] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState([]);
     const [showDropdown, setShowDropdown] = useState(false);
-    const [allPosts, setAllPosts] = useState([]); // เก็บข้อมูลทั้งหมดสำหรับการค้นหา
+    const [allPosts, setAllPosts] = useState([]); // เก็บข้อมูลทั้งหมด (approved) สำหรับ filter/pagination/search
+    const [AllCategory, setAllCategory] = useState([]);
     const searchRef = useRef(null);
 
     const handleLoadMore = () => {
@@ -40,59 +41,68 @@ function ArticleSection () {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Fetch ข้อมูลทั้งหมดสำหรับการค้นหา
+    // Fetch ข้อมูลทั้งหมดครั้งเดียว (approved status_id=2) โดยดึงทุกหน้า
     useEffect(() => {
-        const fetchAllPosts = async () => {
+        const fetchAllApprovedPosts = async () => {
             try {
-                const response = await axios.get(
-                    "https://blog-post-project-api.vercel.app/posts",
-                    {
-                        params: {
-                            page: 1,
-                            limit: 100 // ดึงข้อมูลจำนวนมากสำหรับค้นหา
+                const limit = 100;
+                let currentPage = 1;
+                let totalPages = 1;
+                let all = [];
+
+                while (currentPage <= totalPages) {
+                    const response = await axios.get(
+                        "/api/posts",
+                        {
+                            params: {
+                                page: currentPage,
+                                limit: limit,
+                                status_id: 2
+                            }
                         }
-                    }
-                );
-                setAllPosts(response.data.posts);
+                    );
+                    const data = response?.data?.data || [];
+                    const curr = response?.data?.currentPage || currentPage;
+                    const total = response?.data?.totalPages || totalPages;
+                    all = all.concat(data);
+                    totalPages = total;
+                    currentPage = curr + 1;
+                }
+
+                setAllPosts(all);
             } catch (error) {
                 console.error("Error fetching all posts:", error);
             }
         };
 
-        fetchAllPosts();
+        fetchAllApprovedPosts();
     }, []);
 
+    // จัดการ filter/pagination ฝั่ง client เมื่อ category หรือ page เปลี่ยน
     useEffect(() => {
-        const fetchPosts = async () => {
-            try {
-              const categoryParam = category === "Highlight" ? "" : category;
-              
-              const response = await axios.get(
-                "https://blog-post-project-api.vercel.app/posts", {
-                  params: {
-                    page: page,
-                    limit: 6,
-                    category: categoryParam
-                  }
-                }
-              );
-              
-              if (page === 1) {
-                setPosts(response.data.posts);
-            } else {
-                setPosts((prevPosts) => [...prevPosts, ...response.data.posts]);
-            }
-              
-              if (response.data.currentPage >= response.data.totalPages) {
-                setHasMore(false);
-              }
-            } catch (error) {
-              console.error("Error fetching posts:", error);
-            }
-          };
+        const filtered = category === "Highlight"
+          ? allPosts
+          : allPosts.filter((p) => (p?.categories?.name || p?.category) === category);
+        const nextVisible = filtered.slice(0, page * 6);
+        setPosts(nextVisible);
+        setHasMore(nextVisible.length < filtered.length);
+    }, [category, page, allPosts]);
 
-        fetchPosts();
-    },[page, category]);
+    useEffect(() => {
+        const fetchAllCategory = async () => {
+            try {
+                const response = await axios.get(
+                    "/api/category/category"
+                );
+                console.log(response.data.data);
+                setAllCategory(response.data.data);
+            } catch (error) {
+                console.error("Error fetching all posts:", error);
+            }
+        };
+      
+        fetchAllCategory();
+      }, []);
 
     // ฟังก์ชันค้นหา
     const handleSearch = (query) => {
@@ -132,21 +142,11 @@ function ArticleSection () {
         setSearchResults([]);
         setShowDropdown(false);
         setPage(1);
-        setHasMore(true);
     };
-
-    // กรองข้อมูลตาม category
-    const filteredData = posts.filter(post => {
-        if (category === "" || category === "Highlight") {
-          return true;
-        }
-        return post.category === category;
-    });
 
     const handleCategoryChange = (newCategory) => {
         setCategory(newCategory);
         setPage(1);
-        setHasMore(true);
         setSearchQuery("");
         setShowDropdown(false);
     };
@@ -161,18 +161,17 @@ function ArticleSection () {
                 className={`text-[#75716B] hover:bg-[#DAD6D1] shadow-none ${
                     category === "Highlight" ? "bg-[#DAD6D1]" : ""
                   }`}>Highlight</Button>
-                <Button onClick={() => handleCategoryChange("Cat")}
-                className={`text-[#75716B] hover:bg-[#DAD6D1] shadow-none ${
-                    category === "Cat" ? "bg-[#DAD6D1]" : ""
-                  }`}>Cat</Button>
-                <Button onClick={() => handleCategoryChange("Inspiration")}
-                className={`text-[#75716B] hover:bg-[#DAD6D1] shadow-none ${
-                    category === "Inspiration" ? "bg-[#DAD6D1]" : ""
-                  }`}>Inspiration</Button>
-                <Button onClick={() => handleCategoryChange("General")}
-                className={`text-[#75716B] hover:bg-[#DAD6D1] shadow-none ${
-                    category === "General" ? "bg-[#DAD6D1]" : ""
-                  }`}>General</Button>
+                {AllCategory.map((cat) => (
+                    <Button 
+                        key={cat.id}
+                        onClick={() => handleCategoryChange(cat.name)}
+                        className={`text-[#75716B] hover:bg-[#DAD6D1] shadow-none ${
+                            category === cat.name ? "bg-[#DAD6D1]" : ""
+                        }`}
+                    >
+                        {cat.name}
+                    </Button>
+                ))}
                 </div>
                 <div className="relative pt-3" ref={searchRef}>
                 <div className="relative">
@@ -238,42 +237,36 @@ function ArticleSection () {
                         transition-colors">
                         Highlight
                         </SelectItem>
-                        <SelectItem value="Cat" className="cursor-pointer hover:bg-gray-100 py-2 px-3
-                        data-[highlighted]:bg-gray-100 
-                        data-[state=checked]:bg-gray-200
-                        transition-colors">
-                        Cat
-                        </SelectItem>
-                        <SelectItem value="Inspiration" className="cursor-pointer hover:bg-gray-100 py-2 px-3
-                        data-[highlighted]:bg-gray-100 
-                        data-[state=checked]:bg-gray-200
-                        transition-colors">
-                        Inspiration
-                        </SelectItem>
-                        <SelectItem value="General" className="cursor-pointer hover:bg-gray-100 py-2 px-3
-                        data-[highlighted]:bg-gray-100 
-                        data-[state=checked]:bg-gray-200
-                        transition-colors">
-                        General
-                        </SelectItem>
+                        {AllCategory.map((cat) => (
+                            <SelectItem 
+                                key={cat.id}
+                                value={cat.name}
+                                className="cursor-pointer hover:bg-gray-100 py-2 px-3
+                                data-[highlighted]:bg-gray-100 
+                                data-[state=checked]:bg-gray-200
+                                transition-colors"
+                            >
+                                {cat.name}
+                            </SelectItem>
+                        ))}
                     </SelectContent>
                     </Select>
                 </div>
             </div>
             </div>
             <div className='grid grid-cols-1 mx-5 md:grid-cols-2 gap-6 md:gap-8 lg:gap-10 lg:w-300 lg:mx-auto'>
-            {filteredData.map((post) => {
+            {posts.map((post) => {
                 const formattedDate = new Date(post.date).toLocaleDateString("en-EN", {
                     day: "2-digit",
                     month: "long",
                     year: "numeric",
                   });
             return (
-                <BlogCard 
+                <BlogCard
                 key={post.id}
                 id={post.id}
                 image={post.image}
-                category={post.category}
+                category={post.categories.name}
                 title={post.title}
                 description={post.description}
                 author={post.author}
@@ -286,7 +279,7 @@ function ArticleSection () {
                 <div className="text-center mt-8 lg:mt-15">
                 <button
                     onClick={handleLoadMore}
-                    className="hover:text-muted-foreground font-medium underline cursor-pointer"
+                    className="hover:font-bold duration-100 font-medium underline cursor-pointer"
                 >
                     View more
                 </button>

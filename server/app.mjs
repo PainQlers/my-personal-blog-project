@@ -4,6 +4,9 @@ import postsRouter from './routes/posts.mjs';
 import cors from "cors";
 import authRouter from "./routes/auth.mjs";
 import { supabase } from './utils/db.mjs';
+import categoryRouter from './routes/category.mjs';
+import commentsRouter from './routes/comments.mjs';
+
 
 const app = express();
 const port = process.env.PORT || 4000;
@@ -14,6 +17,8 @@ app.use(cors());
 // API routes
 app.use('/api/posts', postsRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/category', categoryRouter)
+app.use('/api/comments', commentsRouter)
 
 // Test routes
 app.get("/api/test" , (req, res) => {
