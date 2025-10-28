@@ -361,37 +361,120 @@ authRouter.put("/update-user", async (req, res) => {
 // Get site author (first admin user) for display on homepage
 authRouter.get("/get-site-author", async (req, res) => {
   try {
-    const { data, error } = await supabase
+    // Find first admin user
+    const { data: adminUser, error: adminError } = await supabase
       .from("users")
-      .select("name, bio, profile_pic")
+      .select("id, name, profile_pic")
       .eq("role", "admin")
       .limit(1)
       .single();
 
-    if (error) {
-      console.error("Error fetching author:", error);
-      // ถ้า error เกี่ยวกับ bio column ให้ลอง query โดยไม่ select bio
-      if (error.message && error.message.includes('bio')) {
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("users")
-          .select("name, profile_pic")
-          .eq("role", "admin")
-          .limit(1)
-          .single();
-
-        if (fallbackError) {
-          return res.status(400).json({ error: "Failed to fetch author info" });
-        }
-
-        return res.status(200).json({ ...fallbackData, bio: "" });
-      }
+    if (adminError || !adminUser) {
       return res.status(400).json({ error: "Failed to fetch author info" });
     }
 
-    res.status(200).json(data || null);
+    // Fetch bio from authors table
+    const { data: authorRow, error: authorError } = await supabase
+      .from("authors")
+      .select("bio")
+      .eq("user_id", adminUser.id)
+      .limit(1)
+      .single();
+
+    const bio = authorError ? "" : (authorRow?.bio || "");
+
+    res.status(200).json({
+      name: adminUser.name,
+      profile_pic: adminUser.profile_pic,
+      bio,
+    });
   } catch (err) {
     console.error("Get author error:", err);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Get current user's author bio (from authors table)
+authRouter.get("/authors/me", protectUser, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const supabaseUserId = userData.user.id;
+
+    const { data: authorRow, error } = await supabase
+      .from("authors")
+      .select("id, user_id, bio, created_at, updated_at")
+      .eq("user_id", supabaseUserId)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    return res.status(200).json(authorRow || { user_id: supabaseUserId, bio: "" });
+  } catch (err) {
+    console.error("GET /authors/me error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
+  }
+});
+
+// Upsert current user's author bio
+authRouter.put("/authors/me", protectUser, async (req, res) => {
+  try {
+    const token = req.headers.authorization?.split(" ")[1];
+    const { bio } = req.body;
+
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized: Token missing" });
+    }
+    if (bio === undefined) {
+      return res.status(400).json({ error: "Bio is required" });
+    }
+
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !userData?.user) {
+      return res.status(401).json({ error: "Unauthorized: Invalid token" });
+    }
+
+    const supabaseUserId = userData.user.id;
+
+    // Check existing author row
+    const { data: existing, error: fetchError } = await supabase
+      .from("authors")
+      .select("id")
+      .eq("user_id", supabaseUserId)
+      .maybeSingle();
+
+    if (fetchError) throw fetchError;
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from("authors")
+        .update({ bio, updated_at: new Date().toISOString() })
+        .eq("id", existing.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return res.status(200).json({ message: "Bio updated", data });
+    } else {
+      const { data, error } = await supabase
+        .from("authors")
+        .insert([{ user_id: supabaseUserId, bio }])
+        .select()
+        .single();
+      if (error) throw error;
+      return res.status(201).json({ message: "Bio created", data });
+    }
+  } catch (err) {
+    console.error("PUT /authors/me error:", err);
+    return res.status(500).json({ error: err.message || "Server error" });
   }
 });
 
