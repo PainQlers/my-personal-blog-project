@@ -19,12 +19,10 @@ function HeroSelection() {
       // Find the first admin user
       const response = await axios.get('/api/auth/get-site-author');
       if (response.data) {
-      // เก็บ bio จาก localStorage ถ้ามี (key: `author_bio`)
-      const savedBio = localStorage.getItem('author_bio') || response.data.bio || "";
-        
         setAuthorInfo({
           name: response.data.name || "Author",
-          bio: savedBio,
+          // ใช้ bio จากฐานข้อมูล (authors table) โดยตรง
+          bio: response.data.bio || "",
           // ดึงรูปจาก API เป็นหลัก
           profilePic: response.data.profile_pic || response.data.profilePic || Bright,
         });
