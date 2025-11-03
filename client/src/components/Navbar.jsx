@@ -11,8 +11,8 @@ function Navbar() {
         </Link>
           </p>
         <AlignJustify className='lg:hidden'/>
-        <div className='cursor-pointer hidden lg:flex lg:gap-2 lg:visible lg:mr-30'>
-          <Button variant='outline' className='rounded-3xl w-31 h-12 hover:scale-102 duration-200'>
+        <div className='hidden lg:flex lg:gap-2 lg:visible lg:mr-30'>
+          <Button variant='outline' className='rounded-3xl w-31 h-12 hover:scale-102 duration-200 cursor-pointer'>
             <Link to={`/login`}>
             Log in
           </Link>

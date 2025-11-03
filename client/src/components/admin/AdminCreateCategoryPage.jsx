@@ -38,7 +38,7 @@ export default function AdminCreateCategoryPage() {
       <main className="flex-1 p-8 bg-gray-50 overflow-auto">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-semibold">Create Category</h2>
-          <Button className="px-8 py-2 rounded-full" onClick={handleSave} disabled={isSubmitting}>
+          <Button className="px-8 py-2 rounded-full border-1 border-black cursor-pointer hover:scale-102 duration-200" onClick={handleSave} disabled={isSubmitting}>
             {isSubmitting ? "Saving..." : "Save"}
           </Button>
         </div>

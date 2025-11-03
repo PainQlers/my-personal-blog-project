@@ -196,7 +196,7 @@ export default function AdminProfilePage() {
               accept="image/*"
               className="hidden"
             />
-            <Button variant="outline" onClick={handleUploadClick}>
+            <Button variant="outline" className="cursor-pointer hover:scale-102 duration-200" onClick={handleUploadClick}>
               Upload profile picture
             </Button>
           </div>
