@@ -8,8 +8,11 @@ import {
     Globe,
   } from "lucide-react";
   import { useLocation, Link } from "react-router-dom";
+  import { useAuth } from "../context/Authentication";
   
   export function AdminSidebar() {
+    const { logout } = useAuth();
+
     const location = useLocation();
   
     // Helper function to check if the current path starts with the base path
@@ -19,7 +22,7 @@ import {
       <aside className="w-64 bg-white shadow-md">
         <div className="p-4">
           <h1 className="text-2xl font-bold">
-            Thomson P<span className="text-green-400">.</span>
+            Bright<span className="text-green-400">.</span>
           </h1>
           <p className="text-sm text-orange-400">Admin panel</p>
         </div>
@@ -89,10 +92,12 @@ import {
             Go to the website
           </Link>
           <Link
+            onClick={logout}
             to="/"
             className="flex items-center px-4 py-2 text-gray-600 hover:bg-gray-300 duration-300"
           >
-            <LogOut className="mr-3 h-5 w-5" />
+            <LogOut 
+            className="mr-3 h-5 w-5" />
             Log out
           </Link>
         </div>
