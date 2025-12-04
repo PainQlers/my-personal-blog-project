@@ -180,9 +180,9 @@ function ArticleSection () {
                     placeholder="Search by title, description, or content" 
                     value={searchQuery} 
                     onChange={(e) => handleSearch(e.target.value)}
-                    className="bg-white w-86 h-12 rounded-xl border-1 border-[#DAD6D1] shadow-none pl-4 pr-20 mb-2" 
+                    className="bg-white w-95 h-12 rounded-xl border-1 border-[#DAD6D1] shadow-none pl-4 pr-20 mb-2" 
                 />
-                <Search className='pointer-events-none absolute right-10 top-1/2 -translate-y-1/2 text-[#75716B]' strokeWidth={1} size={20} />
+                <Search className='pointer-events-none absolute right-5 top-1/2 -translate-y-1/2 text-[#75716B]' strokeWidth={1} size={20} />
                 {searchQuery && (
                     <button
                         onClick={handleClearSearch}
